@@ -1,0 +1,14 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+                       
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\objects\12.d -o.\objects\12.o -ID:\Alastor\Desktop\supersecre
+t\RTE\_Target_1 -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.0\CMSIS\Include -IC:\Keil_v
+5\ARM\PACK\Keil\STM32F4xx_DFP\2.11.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include 
+--predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 522" --predefin
+e="_RTE_ SETA 1" --predefine="STM32F407xx SETA 1" --list=.\listings\12.lst 12.s
+334 symbols in table

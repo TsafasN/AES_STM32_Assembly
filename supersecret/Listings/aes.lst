@@ -1,0 +1,1077 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000                 AREA             SIMPLE_PROG,CODE,READONLY
+    2 00000000         
+    3 00000000         
+    4 00000000         __keyexp
+                               PROC
+    5 00000000                 EXPORT           __keyexp
+    6 00000000         
+    7 00000000 F04F 0A00       ldr              r10,=0x00000000
+    8 00000004 F04F 0201       ldr              r2,=0x00000001 
+                                                            ;rcon first column
+    9 00000008 4614            mov              r4,r2       ;store rcon to r4
+   10 0000000A 4900            ldr              r1,=0x20000220 ;initial key pos
+                                                            ition
+   11 0000000C 20000220        LTORG
+   12 00000010         
+   13 00000010         key_round
+   14 00000010         
+   15 00000010         ;;;;;;;;;;rotate word;;;;;;;;;;;;;;
+   16 00000010         
+   17 00000010 F101 020C       add              r2,r1,#0x0C ;next byte of origi
+                                                            nal key
+   18 00000014 6813            ldr              r3,[r2]
+   19 00000016 EA4F 2333       ror              r3,r3,#8
+   20 0000001A         
+   21 0000001A         ;;;;;;;;;;;;;sbox;;;;;;;;;;;;;;;;;;
+   22 0000001A         
+   23 0000001A 461D            mov              r5,r3       ;save in r5 the rot
+                                                            ated 4-byte column
+   24 0000001C         
+   25 0000001C F003 03FF       and              r3,r3,#0x000000FF ;keep first b
+                                                            yte  (pass paramete
+                                                            r to __subbytes)
+   26 00000020 B500            STMFD            sp!,{lr}
+   27 00000022 F7FF FFFE       BL               __subbytes  ;call sbox
+   28 00000026 F85D EB04       LDMFD            sp!,{lr}
+   29 0000002A 7113            strb             r3,[r2,#4]  ;store after last c
+                                                            olumn byte
+   30 0000002C         
+   31 0000002C 462B            mov              r3,r5
+   32 0000002E EA4F 2333       ror              r3,r3,#8
+   33 00000032 F003 03FF       and              r3,r3,#0x000000FF ;keep second 
+                                                            byte  (pass paramet
+                                                            er to __subbytes)
+   34 00000036 B500            STMFD            sp!,{lr}
+   35 00000038 F7FF FFFE       BL               __subbytes  ;call sbox
+   36 0000003C F85D EB04       LDMFD            sp!,{lr}
+   37 00000040 7153            strb             r3,[r2,#5]  ;store next byte
+   38 00000042         
+   39 00000042 462B            mov              r3,r5
+   40 00000044 EA4F 4333       ror              r3,r3,#16
+   41 00000048 F003 03FF       and              r3,r3,#0x000000FF ;keep third b
+                                                            yte  (pass paramete
+                                                            r to __subbytes)
+   42 0000004C B500            STMFD            sp!,{lr}
+   43 0000004E F7FF FFFE       BL               __subbytes  ;call sbox
+   44 00000052 F85D EB04       LDMFD            sp!,{lr}
+   45 00000056 7193            strb             r3,[r2,#6]  ;store next byte
+   46 00000058         
+   47 00000058 462B            mov              r3,r5
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   48 0000005A EA4F 6333       ror              r3,r3,#24
+   49 0000005E F003 03FF       and              r3,r3,#0x000000FF ;keep fourth 
+                                                            byte  (pass paramet
+                                                            er to __subbytes)
+   50 00000062 B500            STMFD            sp!,{lr}
+   51 00000064 F7FF FFFE       BL               __subbytes  ;call sbox
+   52 00000068 F85D EB04       LDMFD            sp!,{lr}
+   53 0000006C 71D3            strb             r3,[r2,#7]  ;store next byte
+   54 0000006E         
+   55 0000006E         ;;;;;;;;;;;;;;;rcon;;;;;;;;;;;;;;;;;
+   56 0000006E         
+   57 0000006E         ;; 1st col
+   58 0000006E 6853            ldr              r3,[r2,#4]  ;load new column in
+                                                             r3
+   59 00000070 EA83 0304       eor              r3,r3,r4    ;xor with rcon colu
+                                                            mn
+   60 00000074 680D            ldr              r5,[r1]
+   61 00000076 EA83 0305       eor              r3,r3,r5    ;xor with initial k
+                                                            ey column
+   62 0000007A 610B            str              r3,[r1,#16] ;store column in sa
+                                                            me position
+   63 0000007C         
+   64 0000007C         ;; 2nd col
+   65 0000007C 684D            ldr              r5,[r1,#4]
+   66 0000007E EA83 0305       eor              r3,r3,r5
+   67 00000082 614B            str              r3,[r1,#20] ;store column in ne
+                                                            xt position
+   68 00000084         
+   69 00000084         ;; 3rd col
+   70 00000084 688D            ldr              r5,[r1,#8]
+   71 00000086 EA83 0305       eor              r3,r3,r5
+   72 0000008A 618B            str              r3,[r1,#24] ;store column in ne
+                                                            xt position
+   73 0000008C         
+   74 0000008C         ;; 4th col
+   75 0000008C 68CD            ldr              r5,[r1,#12]
+   76 0000008E EA83 0305       eor              r3,r3,r5
+   77 00000092 61CB            str              r3,[r1,#28] ;store column in ne
+                                                            xt position
+   78 00000094         
+   79 00000094 F101 0110       add              r1,r1,#16
+   80 00000098         
+   81 00000098 F1BA 0F00       cmp              r10,#0
+   82 0000009C D107            bne              last_round
+   83 0000009E         
+   84 0000009E 4424            add              r4,r4,r4    ;next value for rco
+                                                            n
+   85 000000A0 2C80            cmp              r4,#0x80
+   86 000000A2 DDB5            ble              key_round
+   87 000000A4         
+   88 000000A4 F04F 041B       mov              r4,0x1b
+   89 000000A8 F10A 0A01       add              r10,r10,#1
+   90 000000AC E7B0            b                key_round
+   91 000000AE         
+   92 000000AE         last_round
+   93 000000AE F1BA 0F02       cmp              r10,#2
+   94 000000B2 D004            beq              end_key
+   95 000000B4 F04F 0436       mov              r4,0x36
+   96 000000B8 F10A 0A01       add              r10,r10,#1
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+   97 000000BC E7A8            b                key_round
+   98 000000BE         end_key
+   99 000000BE 4770            BX               R14
+  100 000000C0                 ENDP
+  101 000000C0         
+  102 000000C0         
+  103 000000C0         __encr  PROC
+  104 000000C0                 EXPORT           __encr
+  105 000000C0         
+  106 000000C0         
+  107 000000C0         ;;;;;;;;;;;;;;addroundkey;;;;;;;;;;;
+  108 000000C0 49D3            ldr              r1,=0x20000200 
+                                                            ;plaintext position
+                                                            
+  109 000000C2 4AD4            ldr              r2,=0x20000220 ;initial key pos
+                                                            ition
+  110 000000C4         
+  111 000000C4 B500            STMFD            sp!,{lr}
+  112 000000C6 F7FF FFFE       BL               __addroundkey
+  113 000000CA F85D EB04       LDMFD            sp!,{lr}
+  114 000000CE         
+  115 000000CE         
+  116 000000CE         ;;;;;;;;;;;;;9 rounds;;;;;;;;;;;;;;;
+  117 000000CE F04F 0A00       mov              r10,#0x00
+  118 000000D2         round_loop
+  119 000000D2 B500            STMFD            sp!,{lr}
+  120 000000D4 F7FF FFFE       BL               __round
+  121 000000D8 F85D EB04       LDMFD            sp!,{lr}
+  122 000000DC         
+  123 000000DC F10A 0A01       add              r10,r10,#0x01
+  124 000000E0 F1BA 0F09       cmp              r10,#0x09
+  125 000000E4 D1F5            bne              round_loop
+  126 000000E6         
+  127 000000E6         
+  128 000000E6         ;;;;;;;;;;;;;;;;10th last round;;;;;
+  129 000000E6         ;;;;;;;;;;;;;;;;__subbytes;;;;;;;;;;;;;;;;;;;;;
+  130 000000E6 49CA            ldr              r1,=0x20000200 ;argument to __s
+                                                            ubbytes
+  131 000000E8 F04F 0200       mov              r2,#0x00    ;counter for 128bit
+                                                            s text (16 * 1 byte
+                                                            )
+  132 000000EC         next_byte_last_round
+  133 000000EC 5C8B            ldrb             r3,[r1,r2]
+  134 000000EE         
+  135 000000EE B500            STMFD            sp!,{lr}
+  136 000000F0 F7FF FFFE       BL               __subbytes
+  137 000000F4 F85D EB04       LDMFD            sp!,{lr}
+  138 000000F8         
+  139 000000F8 548B            strb             r3,[r1,r2]
+  140 000000FA         
+  141 000000FA F102 0201       add              r2,r2,#0x01
+  142 000000FE 2A10            cmp              r2,#16
+  143 00000100 D1F4            bne              next_byte_last_round
+  144 00000102         
+  145 00000102         
+  146 00000102         ;;;;;;;;;;;;;;;;;__shiftrows;;;;;;;;;;;;;;;;;;;;;;
+  147 00000102 B500            STMFD            sp!,{lr}
+  148 00000104 F7FF FFFE       BL               __shiftrows
+  149 00000108 F85D EB04       LDMFD            sp!,{lr}
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+  150 0000010C         
+  151 0000010C         ;;;;;;;;;;;;;;;;;__addroundkey;;;;;;;;;;;;;;;;;;;;
+  152 0000010C 49C0            ldr              r1,=0x20000200 ;argument to __m
+                                                            ixcolumns
+  153 0000010E 4AC2            ldr              r2,=0x200002C0 ;argument to __m
+                                                            ixcolumns
+  154 00000110         
+  155 00000110 B500            STMFD            sp!,{lr}
+  156 00000112 F7FF FFFE       BL               __addroundkey
+  157 00000116 F85D EB04       LDMFD            sp!,{lr}
+  158 0000011A         
+  159 0000011A 4770            BX               R14
+  160 0000011C                 ENDP
+  161 0000011C         
+  162 0000011C         
+  163 0000011C         __round PROC
+  164 0000011C                 EXPORT           __round
+  165 0000011C         
+  166 0000011C         
+  167 0000011C         ;;;;;;;;;;;;;;;;;__subbytes;;;;;;;;;;;;;;;;;;;;
+  168 0000011C 49BC            ldr              r1,=0x20000200 ;argument to __s
+                                                            ubbytes
+  169 0000011E F04F 0200       mov              r2,#0x00    ;counter for 128bit
+                                                            s text (16 * 1 byte
+                                                            )
+  170 00000122         next_byte
+  171 00000122 5C8B            ldrb             r3,[r1,r2]
+  172 00000124         
+  173 00000124 B500            STMFD            sp!,{lr}
+  174 00000126 F7FF FFFE       BL               __subbytes
+  175 0000012A F85D EB04       LDMFD            sp!,{lr}
+  176 0000012E         
+  177 0000012E 548B            strb             r3,[r1,r2]
+  178 00000130         
+  179 00000130 F102 0201       add              r2,r2,#0x01
+  180 00000134 2A10            cmp              r2,#16
+  181 00000136 D1F4            bne              next_byte
+  182 00000138         
+  183 00000138         
+  184 00000138         ;;;;;;;;;;;;;;;;;__shiftrows;;;;;;;;;;;;;;;;;;;;;
+  185 00000138         ;argument already in r1
+  186 00000138 B500            STMFD            sp!,{lr}
+  187 0000013A F7FF FFFE       BL               __shiftrows
+  188 0000013E F85D EB04       LDMFD            sp!,{lr}
+  189 00000142         
+  190 00000142         
+  191 00000142         
+  192 00000142         ;;;;;;;;;;;;;;;;__mixcolumns;;;;;;;;;;;;;;;;;;;;;;
+  193 00000142 49B3            ldr              r1,=0x20000200 ;argument to __m
+                                                            ixcolumns
+  194 00000144 F04F 0C00       mov              r12,#0x00   ;counter for 128bit
+                                                            s text (16 * 1 byte
+                                                            )
+  195 00000148         next_column
+  196 00000148         
+  197 00000148 B500            STMFD            sp!,{lr}
+  198 0000014A F7FF FFFE       BL               __mixcolumns
+  199 0000014E F85D EB04       LDMFD            sp!,{lr}
+  200 00000152         
+
+
+
+ARM Macro Assembler    Page 5 
+
+
+  201 00000152 F10C 0C01       add              r12,r12,#0x01
+  202 00000156 F101 0104       add              r1,r1,#4
+  203 0000015A F1BC 0F04       cmp              r12,#4
+  204 0000015E D1F3            bne              next_column
+  205 00000160         
+  206 00000160         ;;;;;;;;;;;;;;;;;__addroundkey;;;;;;;;;;;;;;;;;;;;;
+  207 00000160 49AB            ldr              r1,=0x20000200 ;1st argument to
+                                                             __addroundkey
+  208 00000162 4AAE            ldr              r2,=0x20000230 ;
+  209 00000164         ;
+  210 00000164 46D1            mov              r9,r10      ;
+  211 00000166 EA4F 1909       lsl              r9,#4       ;
+  212 0000016A 444A            add              r2,r2,r9    ;2nd argument to __
+                                                            addroundkey
+  213 0000016C         
+  214 0000016C B500            STMFD            sp!,{lr}
+  215 0000016E F7FF FFFE       BL               __addroundkey
+  216 00000172 F85D EB04       LDMFD            sp!,{lr}
+  217 00000176         
+  218 00000176 4770            BX               R14
+  219 00000178                 ENDP
+  220 00000178         
+  221 00000178         __addroundkey
+                               PROC
+  222 00000178                 EXPORT           __addroundkey
+  223 00000178         ;inputs:  r1 1st operand location
+  224 00000178         ;   r2 2nd operand location
+  225 00000178         
+  226 00000178 F04F 0300       mov              r3,#0
+  227 0000017C         
+  228 0000017C         xor_128
+  229 0000017C 58CC            ldr              r4,[r1,r3]
+  230 0000017E 58D5            ldr              r5,[r2,r3]
+  231 00000180 EA84 0605       eor              r6,r4,r5
+  232 00000184 50CE            str              r6,[r1,r3]
+  233 00000186 F103 0304       add              r3,r3,#0x04
+  234 0000018A 2B10            cmp              r3,#0x010
+  235 0000018C D1F6            bne              xor_128
+  236 0000018E         
+  237 0000018E 4770            BX               R14
+  238 00000190                 ENDP
+  239 00000190         
+  240 00000190         __subbytes
+                               PROC
+  241 00000190                 EXPORT           __subbytes
+  242 00000190         ;input: 1 byte @r3
+  243 00000190         
+  244 00000190 F8DF 828C       ldr              r8,=0x20000216
+  245 00000194 F8D8 7000       ldr              r7,[r8]
+  246 00000198 EB07 0603       add              r6,r7,r3
+  247 0000019C 7833            ldrb             r3,[r6]
+  248 0000019E         
+  249 0000019E 4770            BX               R14
+  250 000001A0                 ENDP
+  251 000001A0         
+  252 000001A0         __shiftrows
+                               PROC
+  253 000001A0                 EXPORT           __shiftrows
+  254 000001A0         ;input: 1 address @r1
+
+
+
+ARM Macro Assembler    Page 6 
+
+
+  255 000001A0         
+  256 000001A0         ;;;row0
+  257 000001A0         ;remains same 
+  258 000001A0         ;;;row 1
+  259 000001A0 784A            ldrb             r2,[r1,#1]
+  260 000001A2         
+  261 000001A2 794B            ldrb             r3,[r1,#5]
+  262 000001A4 704B            strb             r3,[r1,#1]
+  263 000001A6         
+  264 000001A6 7A4B            ldrb             r3,[r1,#9]
+  265 000001A8 714B            strb             r3,[r1,#5]
+  266 000001AA         
+  267 000001AA 7B4B            ldrb             r3,[r1,#13]
+  268 000001AC 724B            strb             r3,[r1,#9]
+  269 000001AE         
+  270 000001AE 734A            strb             r2,[r1,#13]
+  271 000001B0         
+  272 000001B0         ;;;row 2
+  273 000001B0 788A            ldrb             r2,[r1,#2]
+  274 000001B2         
+  275 000001B2 798B            ldrb             r3,[r1,#6]
+  276 000001B4         
+  277 000001B4         
+  278 000001B4 7A8C            ldrb             r4,[r1,#10]
+  279 000001B6 708C            strb             r4,[r1,#2]
+  280 000001B8         
+  281 000001B8 7B8C            ldrb             r4,[r1,#14]
+  282 000001BA 718C            strb             r4,[r1,#6]
+  283 000001BC         
+  284 000001BC 728A            strb             r2,[r1,#10]
+  285 000001BE 738B            strb             r3,[r1,#14]
+  286 000001C0         
+  287 000001C0         
+  288 000001C0         ;;;row 3
+  289 000001C0 7BCA            ldrb             r2,[r1,#15]
+  290 000001C2         
+  291 000001C2 7ACB            ldrb             r3,[r1,#11]
+  292 000001C4 73CB            strb             r3,[r1,#15]
+  293 000001C6         
+  294 000001C6 79CB            ldrb             r3,[r1,#7]
+  295 000001C8 72CB            strb             r3,[r1,#11]
+  296 000001CA         
+  297 000001CA 78CB            ldrb             r3,[r1,#3]
+  298 000001CC 71CB            strb             r3,[r1,#7]
+  299 000001CE         
+  300 000001CE 70CA            strb             r2,[r1,#3]
+  301 000001D0         
+  302 000001D0         
+  303 000001D0 4770            BX               R14
+  304 000001D2                 ENDP
+  305 000001D2         
+  306 000001D2         __mixcolumns
+                               PROC
+  307 000001D2                 EXPORT           __mixcolumns
+  308 000001D2         ;input: 1 address @r1
+  309 000001D2 4A94            ldr              r2,=0x20000300
+  310 000001D4 6812            ldr              r2,[r2]
+  311 000001D6 4B94            ldr              r3,=0x20000306
+  312 000001D8 681B            ldr              r3,[r3]
+
+
+
+ARM Macro Assembler    Page 7 
+
+
+  313 000001DA         
+  314 000001DA         ;element 1
+  315 000001DA 780C            ldrb             r4,[r1]
+  316 000001DC 5D15            ldrb             r5,[r2,r4]  ;mc2[r4]
+  317 000001DE         
+  318 000001DE 784C            ldrb             r4,[r1,#1]
+  319 000001E0 5D1E            ldrb             r6,[r3,r4]  ;mc3[r4]
+  320 000001E2         
+  321 000001E2 EA85 0506       eor              r5,r5,r6
+  322 000001E6         
+  323 000001E6 788C            ldrb             r4,[r1,#2]
+  324 000001E8 EA85 0504       eor              r5,r5,r4
+  325 000001EC         
+  326 000001EC 78CC            ldrb             r4,[r1,#3]
+  327 000001EE EA85 0704       eor              r7,r5,r4    ;element 1 in r7
+  328 000001F2         ;element 2
+  329 000001F2 784C            ldrb             r4,[r1,#1]
+  330 000001F4 5D15            ldrb             r5,[r2,r4]  ;mc2[r4]
+  331 000001F6         
+  332 000001F6 788C            ldrb             r4,[r1,#2]
+  333 000001F8 5D1E            ldrb             r6,[r3,r4]  ;mc3[r4]
+  334 000001FA         
+  335 000001FA EA85 0506       eor              r5,r5,r6
+  336 000001FE         
+  337 000001FE 780C            ldrb             r4,[r1]
+  338 00000200 EA85 0504       eor              r5,r5,r4
+  339 00000204         
+  340 00000204 78CC            ldrb             r4,[r1,#3]
+  341 00000206 EA85 0804       eor              r8,r5,r4    ;element 2 in r8
+  342 0000020A         ;element 3
+  343 0000020A 788C            ldrb             r4,[r1,#2]
+  344 0000020C 5D15            ldrb             r5,[r2,r4]  ;mc2[r4]
+  345 0000020E         
+  346 0000020E 78CC            ldrb             r4,[r1,#3]
+  347 00000210 5D1E            ldrb             r6,[r3,r4]  ;mc3[r4]
+  348 00000212         
+  349 00000212 EA85 0506       eor              r5,r5,r6
+  350 00000216         
+  351 00000216 780C            ldrb             r4,[r1]
+  352 00000218 EA85 0504       eor              r5,r5,r4
+  353 0000021C         
+  354 0000021C 784C            ldrb             r4,[r1,#1]
+  355 0000021E EA85 0904       eor              r9,r5,r4    ;element 3 in r9
+  356 00000222         ;element 4
+  357 00000222 78CC            ldrb             r4,[r1,#3]
+  358 00000224 5D15            ldrb             r5,[r2,r4]  ;mc2[r4]
+  359 00000226         
+  360 00000226 780C            ldrb             r4,[r1]
+  361 00000228 5D1E            ldrb             r6,[r3,r4]  ;mc3[r4]
+  362 0000022A         
+  363 0000022A EA85 0506       eor              r5,r5,r6
+  364 0000022E         
+  365 0000022E 784C            ldrb             r4,[r1,#1]
+  366 00000230 EA85 0504       eor              r5,r5,r4
+  367 00000234         
+  368 00000234 788C            ldrb             r4,[r1,#2]
+  369 00000236 EA85 0B04       eor              r11,r5,r4   ;element 4 in r11
+  370 0000023A         ;store elements
+  371 0000023A 700F            strb             r7,[r1]
+
+
+
+ARM Macro Assembler    Page 8 
+
+
+  372 0000023C F881 8001       strb             r8,[r1,#1]
+  373 00000240 F881 9002       strb             r9,[r1,#2]
+  374 00000244 F881 B003       strb             r11,[r1,#3]
+  375 00000248         
+  376 00000248         
+  377 00000248         
+  378 00000248 4770            BX               R14
+  379 0000024A                 ENDP
+  380 0000024A         
+  381 0000024A         __decr  PROC
+  382 0000024A                 EXPORT           __decr
+  383 0000024A         
+  384 0000024A         
+  385 0000024A         ;;;;;;;;;;;;;;addroundkey;;;;;;;;;;;
+  386 0000024A 4971            ldr              r1,=0x20000200
+  387 0000024C 4A72            ldr              r2,=0x200002C0
+  388 0000024E         
+  389 0000024E B500            STMFD            sp!,{lr}
+  390 00000250 F7FF FFFE       BL               __addroundkey
+  391 00000254 F85D EB04       LDMFD            sp!,{lr}
+  392 00000258         
+  393 00000258         
+  394 00000258         ;;;;;;;;;;;;;9 rounds;;;;;;;;;;;;;;;
+  395 00000258 F04F 0A00       mov              r10,#0x00
+  396 0000025C         decround_loop
+  397 0000025C B500            STMFD            sp!,{lr}
+  398 0000025E F7FF FFFE       BL               __decround
+  399 00000262 F85D EB04       LDMFD            sp!,{lr}
+  400 00000266         
+  401 00000266 F10A 0A01       add              r10,r10,#0x01
+  402 0000026A F1BA 0F09       cmp              r10,#0x09
+  403 0000026E D1F5            bne              decround_loop
+  404 00000270         
+  405 00000270         
+  406 00000270         ;;;;;;;;;;;;;;;;10th last round;;;;;
+  407 00000270         ;;;;;;;;;;;;;;;;;;__shiftrows;;;;;;;;;;;;;;;;;;;
+  408 00000270 4967            ldr              r1,=0x20000200 ;argument to __s
+                                                            ubbytes
+  409 00000272         
+  410 00000272 B500            STMFD            sp!,{lr}
+  411 00000274 F7FF FFFE       BL               __invshiftrows
+  412 00000278 F85D EB04       LDMFD            sp!,{lr}
+  413 0000027C         
+  414 0000027C         
+  415 0000027C         ;;;;;;;;;;;;;;;;;;__subbytes;;;;;;;;;;;;;;;;;;;;;
+  416 0000027C 4964            ldr              r1,=0x20000200 ;argument to __s
+                                                            ubbytes
+  417 0000027E F04F 0200       mov              r2,#0x00    ;counter for 128bit
+                                                            s text (16 * 1 byte
+                                                            )
+  418 00000282         inv_next_byte_last_round
+  419 00000282 5C8B            ldrb             r3,[r1,r2]
+  420 00000284         
+  421 00000284 B500            STMFD            sp!,{lr}
+  422 00000286 F7FF FFFE       BL               __invsubbytes
+  423 0000028A F85D EB04       LDMFD            sp!,{lr}
+  424 0000028E         
+  425 0000028E 548B            strb             r3,[r1,r2]
+  426 00000290         
+
+
+
+ARM Macro Assembler    Page 9 
+
+
+  427 00000290 F102 0201       add              r2,r2,#0x01
+  428 00000294 2A10            cmp              r2,#16
+  429 00000296 D1F4            bne              inv_next_byte_last_round
+  430 00000298         
+  431 00000298         
+  432 00000298         ;;;;;;;;;;;;;;;;;;__addroundkey;;;;;;;;;;;;;;;;;;;;
+  433 00000298 495D            ldr              r1,=0x20000200 ;argument to __m
+                                                            ixcolumns
+  434 0000029A 4A5E            ldr              r2,=0x20000220 ;argument to __m
+                                                            ixcolumns
+  435 0000029C         
+  436 0000029C B500            STMFD            sp!,{lr}
+  437 0000029E F7FF FFFE       BL               __addroundkey
+  438 000002A2 F85D EB04       LDMFD            sp!,{lr}
+  439 000002A6         
+  440 000002A6         
+  441 000002A6 4770            BX               R14
+  442 000002A8                 ENDP
+  443 000002A8         
+  444 000002A8         
+  445 000002A8         __decround
+                               PROC
+  446 000002A8                 EXPORT           __decround
+  447 000002A8         
+  448 000002A8         ;;;;;;;;;;;;;;;;;;__invshiftrows;;;;;;;;;;;;;;;;;
+  449 000002A8 4959            ldr              r1,=0x20000200 ;argument to __s
+                                                            ubbytes
+  450 000002AA         
+  451 000002AA B500            STMFD            sp!,{lr}
+  452 000002AC F7FF FFFE       BL               __invshiftrows
+  453 000002B0 F85D EB04       LDMFD            sp!,{lr}
+  454 000002B4         
+  455 000002B4         ;;;;;;;;;;;;;;;;;__invsubbytes;;;;;;;;;;;;;;;;;;;;;;
+  456 000002B4 4956            ldr              r1,=0x20000200 ;argument to __s
+                                                            ubbytes
+  457 000002B6 F04F 0200       mov              r2,#0x00    ;counter for 128bit
+                                                            s text (16 * 1 byte
+                                                            )
+  458 000002BA         dec_next_byte
+  459 000002BA 5C8B            ldrb             r3,[r1,r2]
+  460 000002BC         
+  461 000002BC B500            STMFD            sp!,{lr}
+  462 000002BE F7FF FFFE       BL               __invsubbytes
+  463 000002C2 F85D EB04       LDMFD            sp!,{lr}
+  464 000002C6         
+  465 000002C6 548B            strb             r3,[r1,r2]
+  466 000002C8         
+  467 000002C8 F102 0201       add              r2,r2,#0x01
+  468 000002CC 2A10            cmp              r2,#16
+  469 000002CE D1F4            bne              dec_next_byte
+  470 000002D0         
+  471 000002D0         ;;;;;;;;;;;;;;;;;;__addroundkey;;;;;;;;;;;;;;;;;;
+  472 000002D0 494F            ldr              r1,=0x20000200 ;argument to __a
+                                                            ddroundkey
+  473 000002D2 4A56            ldr              r2,=0x200002B0 ;argument to __a
+                                                            ddroundkey
+  474 000002D4         
+  475 000002D4 46D1            mov              r9,r10
+  476 000002D6 EA4F 1909       lsl              r9,#4
+
+
+
+ARM Macro Assembler    Page 10 
+
+
+  477 000002DA EBA2 0209       sub              r2,r2,r9
+  478 000002DE         
+  479 000002DE B500            STMFD            sp!,{lr}
+  480 000002E0 F7FF FFFE       BL               __addroundkey
+  481 000002E4 F85D EB04       LDMFD            sp!,{lr}
+  482 000002E8         
+  483 000002E8         ;;;;;;;;;;;;;;;;;;__invmixcolumns;;;;;;;;;;;;;;;;;
+  484 000002E8 4949            ldr              r1,=0x20000200 ;argument to __m
+                                                            ixcolumns
+  485 000002EA         
+  486 000002EA B500            STMFD            sp!,{lr}
+  487 000002EC F7FF FFFE       BL               __invmixcolumns
+  488 000002F0 F85D EB04       LDMFD            sp!,{lr}
+  489 000002F4         
+  490 000002F4 F101 0104       add              r1,r1,#4
+  491 000002F8         
+  492 000002F8 B500            STMFD            sp!,{lr}
+  493 000002FA F7FF FFFE       BL               __invmixcolumns
+  494 000002FE F85D EB04       LDMFD            sp!,{lr}
+  495 00000302         
+  496 00000302 F101 0104       add              r1,r1,#4
+  497 00000306         
+  498 00000306 B500            STMFD            sp!,{lr}
+  499 00000308 F7FF FFFE       BL               __invmixcolumns
+  500 0000030C F85D EB04       LDMFD            sp!,{lr}
+  501 00000310         
+  502 00000310 F101 0104       add              r1,r1,#4
+  503 00000314         
+  504 00000314 B500            STMFD            sp!,{lr}
+  505 00000316 F7FF FFFE       BL               __invmixcolumns
+  506 0000031A F85D EB04       LDMFD            sp!,{lr}
+  507 0000031E         
+  508 0000031E 4770            BX               R14
+  509 00000320                 ENDP
+  510 00000320         
+  511 00000320         __invshiftrows
+                               PROC
+  512 00000320                 EXPORT           __invshiftrows
+  513 00000320         ;input: 1 address @r1
+  514 00000320         
+  515 00000320         ;;;row0
+  516 00000320         ;remains same 
+  517 00000320         ;;;row 1
+  518 00000320 7B4A            ldrb             r2,[r1,#13]
+  519 00000322         
+  520 00000322 7A4B            ldrb             r3,[r1,#9]
+  521 00000324 734B            strb             r3,[r1,#13]
+  522 00000326         
+  523 00000326 794B            ldrb             r3,[r1,#5]
+  524 00000328 724B            strb             r3,[r1,#9]
+  525 0000032A         
+  526 0000032A 784B            ldrb             r3,[r1,#1]
+  527 0000032C 714B            strb             r3,[r1,#5]
+  528 0000032E         
+  529 0000032E 704A            strb             r2,[r1,#1]
+  530 00000330         
+  531 00000330         ;;;row 2
+  532 00000330 7A8A            ldrb             r2,[r1,#10]
+  533 00000332 7B8B            ldrb             r3,[r1,#14]
+
+
+
+ARM Macro Assembler    Page 11 
+
+
+  534 00000334         
+  535 00000334 798C            ldrb             r4,[r1,#6]
+  536 00000336 738C            strb             r4,[r1,#14]
+  537 00000338         
+  538 00000338 788C            ldrb             r4,[r1,#2]
+  539 0000033A 728C            strb             r4,[r1,#10]
+  540 0000033C         
+  541 0000033C 708A            strb             r2,[r1,#2]
+  542 0000033E 718B            strb             r3,[r1,#6]
+  543 00000340         
+  544 00000340         
+  545 00000340         ;;;row 3
+  546 00000340 78CA            ldrb             r2,[r1,#3]
+  547 00000342         
+  548 00000342 79CB            ldrb             r3,[r1,#7]
+  549 00000344 70CB            strb             r3,[r1,#3]
+  550 00000346         
+  551 00000346 7ACB            ldrb             r3,[r1,#11]
+  552 00000348 71CB            strb             r3,[r1,#7]
+  553 0000034A         
+  554 0000034A 7BCB            ldrb             r3,[r1,#15]
+  555 0000034C 72CB            strb             r3,[r1,#11]
+  556 0000034E         
+  557 0000034E 73CA            strb             r2,[r1,#15]
+  558 00000350         
+  559 00000350         
+  560 00000350 4770            BX               R14
+  561 00000352                 ENDP
+  562 00000352         
+  563 00000352         __invsubbytes
+                               PROC
+  564 00000352                 EXPORT           __invsubbytes
+  565 00000352         ;input: 1 byte @r3
+  566 00000352         
+  567 00000352 F8DF 80DC       ldr              r8,=0x2000021A
+  568 00000356 F8D8 7000       ldr              r7,[r8]
+  569 0000035A EB07 0603       add              r6,r7,r3
+  570 0000035E 7833            ldrb             r3,[r6]
+  571 00000360         
+  572 00000360 4770            BX               R14
+  573 00000362                 ENDP
+  574 00000362         
+  575 00000362         __invmixcolumns
+                               PROC
+  576 00000362                 EXPORT           __invmixcolumns
+  577 00000362         ;input: 1 address @r1
+  578 00000362 4A34            ldr              r2,=0x2000030c
+  579 00000364 6812            ldr              r2,[r2]
+  580 00000366 4B34            ldr              r3,=0x20000312
+  581 00000368 681B            ldr              r3,[r3]
+  582 0000036A 4C34            ldr              r4,=0x20000318
+  583 0000036C 6824            ldr              r4,[r4]
+  584 0000036E 4D34            ldr              r5,=0x2000031e
+  585 00000370 682D            ldr              r5,[r5]
+  586 00000372         
+  587 00000372         ;element 1
+  588 00000372 780E            ldrb             r6,[r1]
+  589 00000374 5DAF            ldrb             r7,[r5,r6]  ;mc14[r6]
+  590 00000376         
+
+
+
+ARM Macro Assembler    Page 12 
+
+
+  591 00000376 784E            ldrb             r6,[r1,#1]
+  592 00000378 F813 8006       ldrb             r8,[r3,r6]  ;mc11[r6]
+  593 0000037C         
+  594 0000037C EA87 0708       eor              r7,r7,r8
+  595 00000380         
+  596 00000380 788E            ldrb             r6,[r1,#2]
+  597 00000382 F814 8006       ldrb             r8,[r4,r6]  ;mc13[r6]
+  598 00000386         
+  599 00000386 EA87 0708       eor              r7,r7,r8
+  600 0000038A         
+  601 0000038A 78CE            ldrb             r6,[r1,#3]
+  602 0000038C F812 8006       ldrb             r8,[r2,r6]  ;mc9[r6]
+  603 00000390         
+  604 00000390 EA87 0708       eor              r7,r7,r8    ;element 1 in r7
+  605 00000394         
+  606 00000394         ;element 2
+  607 00000394 780E            ldrb             r6,[r1]
+  608 00000396 F812 8006       ldrb             r8,[r2,r6]  ;mc9[r6]
+  609 0000039A         
+  610 0000039A 784E            ldrb             r6,[r1,#1]
+  611 0000039C F815 9006       ldrb             r9,[r5,r6]  ;mc14[r6]
+  612 000003A0         
+  613 000003A0 EA89 0808       eor              r8,r9,r8
+  614 000003A4         
+  615 000003A4 788E            ldrb             r6,[r1,#2]
+  616 000003A6 F813 9006       ldrb             r9,[r3,r6]  ;mc11[r6]
+  617 000003AA         
+  618 000003AA EA89 0808       eor              r8,r9,r8
+  619 000003AE         
+  620 000003AE 78CE            ldrb             r6,[r1,#3]
+  621 000003B0 F814 9006       ldrb             r9,[r4,r6]  ;mc13[r6]
+  622 000003B4         
+  623 000003B4 EA89 0808       eor              r8,r9,r8    ;element 1 in r7
+  624 000003B8         
+  625 000003B8         ;element 3
+  626 000003B8 780E            ldrb             r6,[r1]
+  627 000003BA F814 9006       ldrb             r9,[r4,r6]  ;mc13[r6]
+  628 000003BE         
+  629 000003BE 784E            ldrb             r6,[r1,#1]
+  630 000003C0 F812 B006       ldrb             r11,[r2,r6] ;mc9[r6]
+  631 000003C4         
+  632 000003C4 EA89 090B       eor              r9,r9,r11
+  633 000003C8         
+  634 000003C8 788E            ldrb             r6,[r1,#2]
+  635 000003CA F815 B006       ldrb             r11,[r5,r6] ;mc14[r6]
+  636 000003CE         
+  637 000003CE EA89 090B       eor              r9,r9,r11
+  638 000003D2         
+  639 000003D2 78CE            ldrb             r6,[r1,#3]
+  640 000003D4 F813 B006       ldrb             r11,[r3,r6] ;mc11[r6]
+  641 000003D8         
+  642 000003D8 EA89 090B       eor              r9,r9,r11   ;element 1 in r7
+  643 000003DC         
+  644 000003DC         ;element 4
+  645 000003DC 780E            ldrb             r6,[r1]
+  646 000003DE F813 B006       ldrb             r11,[r3,r6] ;mc11[r6]
+  647 000003E2         
+  648 000003E2 784E            ldrb             r6,[r1,#1]
+  649 000003E4 F814 C006       ldrb             r12,[r4,r6] ;mc13[r6]
+
+
+
+ARM Macro Assembler    Page 13 
+
+
+  650 000003E8         
+  651 000003E8 EA8B 0B0C       eor              r11,r11,r12
+  652 000003EC         
+  653 000003EC 788E            ldrb             r6,[r1,#2]
+  654 000003EE F812 C006       ldrb             r12,[r2,r6] ;mc9[r6]
+  655 000003F2         
+  656 000003F2 EA8B 0B0C       eor              r11,r11,r12
+  657 000003F6         
+  658 000003F6 78CE            ldrb             r6,[r1,#3]
+  659 000003F8 F815 C006       ldrb             r12,[r5,r6] ;mc14[r6]
+  660 000003FC         
+  661 000003FC EA8B 0B0C       eor              r11,r11,r12 ;element 1 in r7
+  662 00000400         
+  663 00000400         ;store elements
+  664 00000400 700F            strb             r7,[r1]
+  665 00000402 F881 8001       strb             r8,[r1,#1]
+  666 00000406 F881 9002       strb             r9,[r1,#2]
+  667 0000040A F881 B003       strb             r11,[r1,#3]
+  668 0000040E         
+  669 0000040E         
+  670 0000040E         
+  671 0000040E 4770            BX               R14
+  672 00000410                 ENDP
+  673 00000410         
+  674 00000410         
+  675 00000410                 END
+              20000200 
+              20000220 
+              200002C0 
+              20000230 
+              20000216 
+              20000300 
+              20000306 
+              200002B0 
+              2000021A 
+              2000030C 
+              20000312 
+              20000318 
+              2000031E 
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4.fp --apcs=int
+erwork --depend=.\objects\aes.d -o.\objects\aes.o -IC:\Users\TSAFAS\Dropbox\Pro
+ject\supersecret\RTE\_Target_1 -IE:\keil\ARM\PACK\ARM\CMSIS\5.0.0\CMSIS\Include
+ -IE:\keil\ARM\PACK\Keil\STM32F4xx_DFP\2.10.0\Drivers\CMSIS\Device\ST\STM32F4xx
+\Include --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 522" -
+-predefine="_RTE_ SETA 1" --predefine="STM32F407xx SETA 1" --list=.\listings\ae
+s.lst aes.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+SIMPLE_PROG 00000000
+
+Symbol: SIMPLE_PROG
+   Definitions
+      At line 1 in file aes.s
+   Uses
+      None
+Comment: SIMPLE_PROG unused
+__addroundkey 00000178
+
+Symbol: __addroundkey
+   Definitions
+      At line 221 in file aes.s
+   Uses
+      At line 112 in file aes.s
+      At line 156 in file aes.s
+      At line 215 in file aes.s
+      At line 222 in file aes.s
+      At line 390 in file aes.s
+      At line 437 in file aes.s
+      At line 480 in file aes.s
+
+__decr 0000024A
+
+Symbol: __decr
+   Definitions
+      At line 381 in file aes.s
+   Uses
+      At line 382 in file aes.s
+Comment: __decr used once
+__decround 000002A8
+
+Symbol: __decround
+   Definitions
+      At line 445 in file aes.s
+   Uses
+      At line 398 in file aes.s
+      At line 446 in file aes.s
+
+__encr 000000C0
+
+Symbol: __encr
+   Definitions
+      At line 103 in file aes.s
+   Uses
+      At line 104 in file aes.s
+Comment: __encr used once
+__invmixcolumns 00000362
+
+Symbol: __invmixcolumns
+   Definitions
+      At line 575 in file aes.s
+   Uses
+      At line 487 in file aes.s
+      At line 493 in file aes.s
+      At line 499 in file aes.s
+      At line 505 in file aes.s
+      At line 576 in file aes.s
+
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+__invshiftrows 00000320
+
+Symbol: __invshiftrows
+   Definitions
+      At line 511 in file aes.s
+   Uses
+      At line 411 in file aes.s
+      At line 452 in file aes.s
+      At line 512 in file aes.s
+
+__invsubbytes 00000352
+
+Symbol: __invsubbytes
+   Definitions
+      At line 563 in file aes.s
+   Uses
+      At line 422 in file aes.s
+      At line 462 in file aes.s
+      At line 564 in file aes.s
+
+__keyexp 00000000
+
+Symbol: __keyexp
+   Definitions
+      At line 4 in file aes.s
+   Uses
+      At line 5 in file aes.s
+Comment: __keyexp used once
+__mixcolumns 000001D2
+
+Symbol: __mixcolumns
+   Definitions
+      At line 306 in file aes.s
+   Uses
+      At line 198 in file aes.s
+      At line 307 in file aes.s
+
+__round 0000011C
+
+Symbol: __round
+   Definitions
+      At line 163 in file aes.s
+   Uses
+      At line 120 in file aes.s
+      At line 164 in file aes.s
+
+__shiftrows 000001A0
+
+Symbol: __shiftrows
+   Definitions
+      At line 252 in file aes.s
+   Uses
+      At line 148 in file aes.s
+      At line 187 in file aes.s
+      At line 253 in file aes.s
+
+__subbytes 00000190
+
+Symbol: __subbytes
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+Relocatable symbols
+
+   Definitions
+      At line 240 in file aes.s
+   Uses
+      At line 27 in file aes.s
+      At line 35 in file aes.s
+      At line 43 in file aes.s
+      At line 51 in file aes.s
+      At line 136 in file aes.s
+      At line 174 in file aes.s
+      At line 241 in file aes.s
+
+dec_next_byte 000002BA
+
+Symbol: dec_next_byte
+   Definitions
+      At line 458 in file aes.s
+   Uses
+      At line 469 in file aes.s
+Comment: dec_next_byte used once
+decround_loop 0000025C
+
+Symbol: decround_loop
+   Definitions
+      At line 396 in file aes.s
+   Uses
+      At line 403 in file aes.s
+Comment: decround_loop used once
+end_key 000000BE
+
+Symbol: end_key
+   Definitions
+      At line 98 in file aes.s
+   Uses
+      At line 94 in file aes.s
+Comment: end_key used once
+inv_next_byte_last_round 00000282
+
+Symbol: inv_next_byte_last_round
+   Definitions
+      At line 418 in file aes.s
+   Uses
+      At line 429 in file aes.s
+Comment: inv_next_byte_last_round used once
+key_round 00000010
+
+Symbol: key_round
+   Definitions
+      At line 13 in file aes.s
+   Uses
+      At line 86 in file aes.s
+      At line 90 in file aes.s
+      At line 97 in file aes.s
+
+last_round 000000AE
+
+Symbol: last_round
+   Definitions
+      At line 92 in file aes.s
+   Uses
+
+
+
+ARM Macro Assembler    Page 4 Alphabetic symbol ordering
+Relocatable symbols
+
+      At line 82 in file aes.s
+Comment: last_round used once
+next_byte 00000122
+
+Symbol: next_byte
+   Definitions
+      At line 170 in file aes.s
+   Uses
+      At line 181 in file aes.s
+Comment: next_byte used once
+next_byte_last_round 000000EC
+
+Symbol: next_byte_last_round
+   Definitions
+      At line 132 in file aes.s
+   Uses
+      At line 143 in file aes.s
+Comment: next_byte_last_round used once
+next_column 00000148
+
+Symbol: next_column
+   Definitions
+      At line 195 in file aes.s
+   Uses
+      At line 204 in file aes.s
+Comment: next_column used once
+round_loop 000000D2
+
+Symbol: round_loop
+   Definitions
+      At line 118 in file aes.s
+   Uses
+      At line 125 in file aes.s
+Comment: round_loop used once
+xor_128 0000017C
+
+Symbol: xor_128
+   Definitions
+      At line 228 in file aes.s
+   Uses
+      At line 235 in file aes.s
+Comment: xor_128 used once
+24 symbols
+363 symbols in table

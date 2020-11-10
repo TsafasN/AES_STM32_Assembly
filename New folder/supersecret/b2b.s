@@ -1,0 +1,11 @@
+AREA SIMPLE_PROG,CODE,READONLY
+
+
+__send PROC
+	EXPORT __send
+		
+		
+		
+	BX R14	
+	ENDP
+	END
